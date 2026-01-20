@@ -1,0 +1,104 @@
+ssh -i teletext-PROD.pem ec2-user@172.20.66.126
+ssh -i teletext-QA.pem ec2-user@172.31.64.231
+/var/lib/kafka/data
+cd /var/lib/
+l
+ll
+
+cd kubelet
+
+sudo pods
+
+du -sh *
+
+cd 0c47530f-93d4-420b-9606-d2c625083913
+
+ll
+
+cd volumes
+
+cd kubernetes.io~csi
+ll
+
+cd pvc-741da0b7-2b2d-4ebf-ab61-19f9e01af396
+
+cd mount
+
+cd data
+
+du -sh *
+rm -rf searchresults-0/*
+
+
+/var/lib/kubelet/pods/d4f24d2d-9b7d-49ec-849a-83a36c2e57cf/volumes/kubernetes.io~csi/pvc-741da0b7-2b2d-4ebf-ab61-19f9e01af396/mount/data
+
+
+
+
+Inside pod 
+--------------------------------
+df -h
+du -sh /var/lib/kafka/data/*
+
+
+
+
+
+
+
+#!/bin/bash
+
+TARGET_PATH="/var/lib/kubelet/pods/d4f24d2d-9b7d-49ec-849a-83a36c2e57cf/volumes/kubernetes.io~csi/pvc-741da0b7-2b2d-4ebf-ab61-19f9e01af396/mount/data"
+THRESHOLD=80
+
+# Get the disk usage percentage of the filesystem containing the target path
+USAGE=$(df -P "$TARGET_PATH" | awk 'NR==2 {gsub("%",""); print $5}')
+
+# If usage >= threshold, delete old files
+if [ "$USAGE" -ge "$THRESHOLD" ]; then
+    echo "$(date): Usage is $USAGE%, cleaning up $TARGET_PATH"
+
+    # Delete files older than 7 days
+    find "$TARGET_PATH" -type f -mtime +7 -print -delete
+
+    # Optional: Clean empty dirs
+    find "$TARGET_PATH" -type d -empty -delete
+else
+    echo "$(date): Usage is $USAGE%, no cleanup needed"
+fi
+
+
+
+
+
+
+
+
+
+
+#!/bin/bash
+
+# Node IP where the PVC is mounted
+NODE_IP="172.20.66.126" 
+
+# SSH key to access the node
+SSH_KEY="/home/ubuntu/.ssh/teletext-PROD.pem"
+
+# Run cleanup script remotely over SSH
+ssh -i "$SSH_KEY" ubuntu@$NODE_IP 'bash -s' << 'EOF'
+#!/bin/bash
+
+TARGET_PATH="/var/lib/kubelet/pods/d4f24d2d-9b7d-49ec-849a-83a36c2e57cf/volumes/kubernetes.io~csi/pvc-741da0b7-2b2d-4ebf-ab61-19f9e01af396/mount/data"
+THRESHOLD=80
+
+# Get disk usage of the volume mount
+USAGE=$(df -P "$TARGET_PATH" | awk 'NR==2 {gsub("%",""); print $5}')
+
+if [ "$USAGE" -ge "$THRESHOLD" ]; then
+    echo "$(date): Disk usage is $USAGE%. Cleaning $TARGET_PATH"
+    find "$TARGET_PATH" -type f -mtime +7 -print -delete
+    find "$TARGET_PATH" -type d -empty -delete
+else
+    echo "$(date): Usage is $USAGE%. No cleanup needed."
+fi
+EOF
