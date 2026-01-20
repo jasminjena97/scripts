@@ -1,0 +1,76 @@
+import boto3
+import time
+import logging
+from datetime import datetime
+
+# Set up logging
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+ec2 = boto3.client('ec2')
+
+def lambda_handler(event, context):
+    instance_id = 'i-0b5230470eef90b93'  # Replace with your EC2 instance ID
+    ami_prefix = f'ami-backup-{instance_id}'  # Prefix for AMIs created for this instance
+    
+    try:
+        # Check the instance state
+        instance_state = ec2.describe_instances(InstanceIds=[instance_id])['Reservations'][0]['Instances'][0]['State']['Name']
+        
+        if instance_state != 'running':
+            logger.info(f"Instance {instance_id} is not running (current state: {instance_state}). Skipping backup.")
+            return {
+                'statusCode': 200,
+                'body': f'Instance {instance_id} is not running. Backup skipped.'
+            }
+        
+        # Step 1: Describe all existing AMIs created by this Lambda for this specific instance
+        images = ec2.describe_images(Owners=['self'], Filters=[
+            {'Name': 'name', 'Values': [f'{ami_prefix}*']}
+        ])['Images']
+        images.sort(key=lambda x: x['CreationDate'], reverse=True)
+        
+        # Step 2: Keep only the latest 5 AMIs and deregister the older ones
+        images_to_delete = images[5:]
+        for image in images_to_delete:
+            image_id = image['ImageId']
+            ec2.deregister_image(ImageId=image_id)
+            logger.info(f"Deregistered AMI: {image_id}")
+            
+            # Delete associated snapshots
+            snapshots = ec2.describe_snapshots(Filters=[
+                {'Name': 'description', 'Values': [f'*{image_id}*']}
+            ])['Snapshots']
+            for snapshot in snapshots:
+                ec2.delete_snapshot(SnapshotId=snapshot['SnapshotId'])
+                logger.info(f"Deleted snapshot: {snapshot['SnapshotId']}")
+        
+        # Step 3: Create a new AMI of the EC2 instance
+        current_date = datetime.now().strftime("%Y-%m-%d")
+        timestamp = int(time.time())
+        new_image_name = f'{ami_prefix}-{current_date}-{timestamp}'
+        response = ec2.create_image(
+            InstanceId=instance_id,
+            Name=new_image_name,
+            Description=f'Automated backup of instance {instance_id} on {current_date}'
+        )
+        image_id = response['ImageId']
+        
+        logger.info(f"Created AMI: {image_id} with name: {new_image_name}")
+        
+        # Wait until the image creation is completed
+        waiter = ec2.get_waiter('image_available')
+        waiter.wait(ImageIds=[image_id], WaiterConfig={'Delay': 30, 'MaxAttempts': 20})
+        
+        logger.info(f"AMI {image_id} is now available")
+        
+        return {
+            'statusCode': 200,
+            'body': f'AMI backup process completed successfully. Created AMI: {image_id} with name: {new_image_name}'
+        }
+    
+    except Exception as e:
+        logger.error(f"An error occurred: {str(e)}")
+        return {
+            'statusCode': 500,
+            'body': f"An error occurred: {str(e)}"
+        }
