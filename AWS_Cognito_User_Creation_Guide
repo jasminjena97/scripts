@@ -1,0 +1,91 @@
+Cognito User Creation :
+
+1. AWS CLI installed and configured
+
+2. Cognito User Pool created
+
+3. User Pool ID available (e.g., us-west-2_Abc123456)
+
+
+uat user pool id : eu-west-1_jkKnSFsS1
+prod user pool id:  eu-west-1_1yghGdnkD
+ 
+
+
+Step 1: Create User
+
+
+aws cognito-idp admin-create-user --user-pool-id eu-west-1_jkKnSFsS1 --username rushikesh --temporary-password 'Knp%rl8c5su@rt' --message-action SUPPRESS    (without email)
+
+aws cognito-idp admin-create-user --user-pool-id eu-west-1_jkKnSFsS1 --username rushikesh --user-attributes Name=email,Value=Null Name=email_verified,Value=true --temporary-password rushukesh@998 --message-action SUPPRESS
+
+
+aws cognito-idp admin-create-user --user-pool-id eu-west-1_jkKnSFsS1 --username narendrau --temporary-password Sts95skes@rt --message-action SUPPRESS
+
+
+Prod 
+aws cognito-idp admin-create-user --user-pool-id eu-west-1_1yghGdnkD --username rushikesh --user-attributes Name=email,Value=rushikesh@zen3.com Name=email_verified,Value=true --temporary-password Ptsyrsf5u@rt --message-action SUPPRESS
+
+
+UAT
+
+aws cognito-idp admin-create-user --user-pool-id eu-west-1_jkKnSFsS1 --username ttwebsite --user-attributes Name=email,Value=NigelB@teletext.com.com Name=email_verified,Value=true --temporary-password Ptsyrsf5u@rt --message-action SUPPRESS
+
+
+
+prod cognito user
+uid: d235d434-f011-7018-b2fb-31d0c3806154
+username - ttwebsite
+Email - NigelB@teletext.com
+
+uat cognito user
+uid : 520524e4-f0c1-7071-eca0-ade969b53560
+username - ttwebsite
+Email - NigelB@teletext.com
+
+
+Step 2: Set Permanent Password (Optional) 
+
+uat:
+aws cognito-idp admin-set-user-password --user-pool-id eu-west-1_jkKnSFsS1 --username rushikesh  --password Rushikesh@998 --permanent
+
+
+prod:
+
+aws cognito-idp admin-set-user-password --user-pool-id eu-west-1_1yghGdnkD --username rushikesh  --password Rushikesh@998 --permanent
+
+Step 3: Verify User
+
+aws cognito-idp list-users --user-pool-id eu-west-1_1yghGdnkD
+
+
+uat-
+uid: e255f4b4-6081-709e-4592-013a04b0fd89
+user : rushikesh
+password : Rushikesh@998
+
+
+prod- 
+uid: 42554414-c0b1-70f3-cfa2-2a65344c6d55
+user : rushikesh
+password : Rushikesh@998
+
+
+aws cognito-idp admin-create-user --user-pool-id eu-west-1_jkKnSFsS1 --username naveenb --user-attributes Name=email,Value=Null Name=email_verified,Value=true --temporary-password Kouatcloues@539 --message-action SUPPRESS
+
+
+aws cognito-idp admin-set-user-password --user-pool-id eu-west-1_jkKnSFsS1 --username narendrau --password Welocmrop2z@ --permanent
+
+
+
+
+
+
+
+
+
+
+
+
+
+
