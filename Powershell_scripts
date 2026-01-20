@@ -1,0 +1,86 @@
+ZEN3
+
+1. ge-dev
+2. au-dev
+3. omc-dev-rtw1
+
+
+
+
+ONEWORLD:
+
+1. oneworldcom-standalone-production
+2. opass-production
+3. ssp-production
+4. ssp-staging
+
+
+
+teletext production
+
+1. txtnxt-prod-mysql
+
+
+
+0 2 * * * /home/ubuntu/scripts/cronjob/restart-teletext-nxt-strapi.sh >> /home/ubuntu/scripts/cronjob/restart-teletext-nxt-strapi.log 2>&1
+
+
+
+
+#!/bin/bash
+
+NAMESPACE=strapi-prod-alpha1
+LABEL_SELECTOR=app.kubernetes.io/name=teletext-nxt-strapi
+SLEEP_INTERVAL=180
+LOG_FILE=/home/ubuntu/scripts/cronjob/restart-teletext-nxt-strapi.log
+
+echo "Script started at $(date)" >> $LOG_FILE
+
+PODS=$(kubectl get pods -n $NAMESPACE -l $LABEL_SELECTOR -o name)
+
+for POD in $PODS; do
+  echo "Deleting pod: $POD at $(date)" >> $LOG_FILE
+  kubectl delete $POD -n $NAMESPACE
+  if [ $? -eq 0 ]; then
+    echo "Successfully deleted pod: $POD at $(date)" >> $LOG_FILE
+  else
+    echo "Failed to delete pod: $POD at $(date)" >> $LOG_FILE
+  fi
+  echo "Sleeping for $SLEEP_INTERVAL seconds..." >> $LOG_FILE
+  sleep $SLEEP_INTERVAL
+done
+
+echo "Script finished at $(date)" >> $LOG_FILE
+
+
+
+server ias
+
+
+
+
+
+#!/bin/bash
+
+NAMESPACE=txtnxt-prod-ns 
+LABEL_SELECTOR=app.kubernetes.io/name=teletext-kafka-0
+SLEEP_INTERVAL=180
+LOG_FILE=/home/ubuntu/scripts/cronjob/restart-teletext-kafka-0.log
+
+echo "Script started at $(date)" >> $LOG_FILE
+
+PODS=$(kubectl get pods -n $NAMESPACE -l $LABEL_SELECTOR -o name)
+
+for POD in $PODS; do
+  echo "Deleting pod: $POD at $(date)" >> $LOG_FILE
+  kubectl delete $POD -n $NAMESPACE
+  if [ $? -eq 0 ]; then
+    echo "Successfully deleted pod: $POD at $(date)" >> $LOG_FILE
+  else
+    echo "Failed to delete pod: $POD at $(date)" >> $LOG_FILE
+  fi
+  echo "Sleeping for $SLEEP_INTERVAL seconds..." >> $LOG_FILE
+  sleep $SLEEP_INTERVAL
+done
+
+echo "Script finished at $(date)" >> $LOG_FILE
