@@ -1,0 +1,69 @@
+mage: amazon/aws-cli:2.13.8
+
+pipelines:
+  custom:
+    start_servers:
+      - step:
+          name: "Start RDS by tag: dev_schedule=Dev_overnight"
+          script:
+            - aws sts get-caller-identity
+
+            # ----- RDS START -----
+            - echo "🔍 Checking RDS instances tagged Dev_schedule=dev_overnight"
+            - |
+              RDS_ARN_LIST=$(aws rds describe-db-instances --query "DBInstances[*].DBInstanceArn" --output text)
+
+              for ARN in $RDS_ARN_LIST; do
+                TAG_MATCH=$(aws rds list-tags-for-resource --resource-name $ARN \
+                  --query "TagList[?Key=='Dev_schedule' && Value=='dev_overnight'].Value" --output text)
+
+                if [ "$TAG_MATCH" == "dev_overnight" ]; then
+                  DB_ID=$(aws rds describe-db-instances \
+                    --query "DBInstances[?DBInstanceArn=='$ARN'].DBInstanceIdentifier" --output text)
+                  STATUS=$(aws rds describe-db-instances \
+                    --db-instance-identifier $DB_ID \
+                    --query "DBInstances[0].DBInstanceStatus" --output text)
+
+                  if [ "$STATUS" == "stopped" ]; then
+                    echo "🚀 Starting RDS instance: $DB_ID"
+                    aws rds start-db-instance --db-instance-identifier $DB_ID --region $AWS_DEFAULT_REGION
+                  else
+                    echo "ℹ️ RDS instance $DB_ID already running or unavailable."
+                  fi
+                fi
+              done
+
+
+image: amazon/aws-cli:2.13.8
+
+pipelines:
+  custom:
+    stop_servers:
+      - step:
+          name: "Stop RDS by tags"
+          script:
+
+
+            - echo "🔍 Checking RDS instances tagged Dev_schedule=dev_overnight"
+            - |
+              RDS_ARN_LIST=$(aws rds describe-db-instances --query "DBInstances[*].DBInstanceArn" --output text)
+
+              for ARN in $RDS_ARN_LIST; do
+                TAG_MATCH=$(aws rds list-tags-for-resource --resource-name $ARN \
+                  --query "TagList[?Key=='Dev_schedule' && Value=='dev_overnight'].Value" --output text)
+
+                if [ "$TAG_MATCH" == "dev_overnight" ]; then
+                  DB_ID=$(aws rds describe-db-instances \
+                    --query "DBInstances[?DBInstanceArn=='$ARN'].DBInstanceIdentifier" --output text)
+                  STATUS=$(aws rds describe-db-instances \
+                    --db-instance-identifier $DB_ID \
+                    --query "DBInstances[0].DBInstanceStatus" --output text)
+
+                  if [ "$STATUS" == "available" ]; then
+                    echo "🛑 Stopping RDS instance: $DB_ID"
+                    aws rds stop-db-instance --db-instance-identifier $DB_ID --region $AWS_DEFAULT_REGION
+                  else
+                    echo "ℹ️ RDS instance $DB_ID is already stopped or unavailable."
+                  fi
+                fi
+              done
